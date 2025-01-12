@@ -1,94 +1,302 @@
-// Update these functions in the script section of your HTML:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #0d1117;
+        }
 
-function str2ab(str) {
-    const buf = new Uint8Array(str.length);
-    for (let i = 0; i < str.length; i++) {
-        buf[i] = str.charCodeAt(i);
-    }
-    return buf;
-}
+        .container {
+            position: relative;
+            display: flex;
+            max-width: 600px;
+            width: 90%;
+            gap: 8px;
+        }
 
-function base64UrlEncode(str) {
-    return btoa(str)
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-}
+        .input-wrapper {
+            position: relative;
+            flex-grow: 1;
+            display: flex;
+        }
 
-function base64UrlDecode(str) {
-    // Add removed padding
-    str = str.replace(/-/g, '+').replace(/_/g, '/');
-    while (str.length % 4) {
-        str += '=';
-    }
-    return str;
-}
+        input {
+            width: 100%;
+            padding: 8px 12px;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 14px;
+            color: #c9d1d9;
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s ease;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
 
-function arrayBufferToBase64Url(arrayBuffer) {
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-    }
-    return base64UrlEncode(binary);
-}
+        input:focus {
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 1px #58a6ff;
+        }
 
-function generate256BitSecret() {
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    return arrayBufferToBase64Url(array);
-}
+        .copy-button {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 4px 8px;
+            font-size: 12px;
+            color: #7d8590;
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0;
+            transition: 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
 
-function generateUnsignedJWT() {
-    const header = {
-        alg: 'HS256',
-        typ: 'JWT'
-    };
+        .input-wrapper:hover .copy-button {
+            opacity: 1;
+        }
 
-    // Updated timestamp
-    const specificDate = new Date('2025-01-12T21:55:33Z');
-    const iat = Math.floor(specificDate.getTime() / 1000);
-    const exp = iat + (2 * 365 * 24 * 60 * 60); // 2 years from iat
+        .copy-button:hover {
+            background-color: #30363d;
+            color: #c9d1d9;
+        }
 
-    const payload = {
-        role: 'anon',
-        iss: 'fortunestoldco',
-        iat: iat,
-        exp: exp
-    };
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
 
-    const encodedHeader = base64UrlEncode(JSON.stringify(header));
-    const encodedPayload = base64UrlEncode(JSON.stringify(payload));
-    
-    return `${encodedHeader}.${encodedPayload}`;
-}
+        .generate-button {
+            padding: 8px 16px;
+            font-size: 16px;
+            color: #c9d1d9;
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 42px;
+        }
 
-async function signJWT(token, secret) {
-    if (!token || !secret) {
-        throw new Error('Both token and secret are required');
-    }
+        .generate-button:hover {
+            background-color: #30363d;
+            border-color: #58a6ff;
+            transform: translateY(-1px);
+        }
 
-    try {
-        // Properly decode the base64url secret
-        const decodedSecret = atob(base64UrlDecode(secret));
-        
-        const keyMaterial = await crypto.subtle.importKey(
-            'raw',
-            str2ab(decodedSecret),
-            { name: 'HMAC', hash: 'SHA-256' },
-            false,
-            ['sign']
-        );
+        .generate-button:active {
+            transform: translateY(0px);
+        }
 
-        const signature = await crypto.subtle.sign(
-            'HMAC',
-            keyMaterial,
-            str2ab(token)
-        );
+        .copy-icon {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
 
-        return `${token}.${arrayBufferToBase64Url(signature)}`;
-    } catch (error) {
-        console.error('Signing error:', error);
-        throw error;
-    }
-}
+        .check-icon {
+            width: 14px;
+            height: 14px;
+            fill: #3fb950;
+            display: none;
+        }
+
+        .copy-button.copied .copy-icon {
+            display: none;
+        }
+
+        .copy-button.copied .check-icon {
+            display: block;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="input-wrapper">
+            <input type="text" id="result" readonly placeholder="Click 🔑 for secret, 🪙 for token, ⭐ to sign">
+            <button class="copy-button" id="copy">
+                <svg class="copy-icon" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z"></path>
+                    <path fill-rule="evenodd" d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z"></path>
+                </svg>
+                <svg class="check-icon" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="button-group">
+            <button class="generate-button" id="generateSecret" title="Generate Secret">🔑</button>
+            <button class="generate-button" id="generateToken" title="Generate Token">🪙</button>
+            <button class="generate-button" id="signToken" title="Sign Token">⭐</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSecret = null;
+        let currentToken = null;
+
+        function str2ab(str) {
+            const buf = new Uint8Array(str.length);
+            for (let i = 0; i < str.length; i++) {
+                buf[i] = str.charCodeAt(i);
+            }
+            return buf;
+        }
+
+        function base64UrlEncode(str) {
+            return btoa(str)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
+        }
+
+        function base64UrlDecode(str) {
+            // Add removed padding
+            str = str.replace(/-/g, '+').replace(/_/g, '/');
+            while (str.length % 4) {
+                str += '=';
+            }
+            return str;
+        }
+
+        function arrayBufferToBase64Url(arrayBuffer) {
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return base64UrlEncode(binary);
+        }
+
+        function generate256BitSecret() {
+            const array = new Uint8Array(32);
+            crypto.getRandomValues(array);
+            return arrayBufferToBase64Url(array);
+        }
+
+        function generateUnsignedJWT() {
+            const header = {
+                alg: 'HS256',
+                typ: 'JWT'
+            };
+
+            // Set specific date and time
+            const specificDate = new Date('2025-01-12T22:12:45Z');
+            const iat = Math.floor(specificDate.getTime() / 1000);
+            const exp = iat + (2 * 365 * 24 * 60 * 60); // 2 years from iat
+
+            const payload = {
+                role: 'anon',
+                iss: 'fortunestoldco',
+                iat: iat,
+                exp: exp
+            };
+
+            const encodedHeader = base64UrlEncode(JSON.stringify(header));
+            const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+            
+            return `${encodedHeader}.${encodedPayload}`;
+        }
+
+        async function signJWT(token, secret) {
+            if (!token || !secret) {
+                throw new Error('Both token and secret are required');
+            }
+
+            try {
+                // Properly decode the base64url secret
+                const decodedSecret = atob(base64UrlDecode(secret));
+                
+                const keyMaterial = await crypto.subtle.importKey(
+                    'raw',
+                    str2ab(decodedSecret),
+                    { name: 'HMAC', hash: 'SHA-256' },
+                    false,
+                    ['sign']
+                );
+
+                const signature = await crypto.subtle.sign(
+                    'HMAC',
+                    keyMaterial,
+                    str2ab(token)
+                );
+
+                return `${token}.${arrayBufferToBase64Url(signature)}`;
+            } catch (error) {
+                console.error('Signing error:', error);
+                throw error;
+            }
+        }
+
+        document.getElementById('generateSecret').addEventListener('click', () => {
+            currentSecret = generate256BitSecret();
+            const resultInput = document.getElementById('result');
+            resultInput.value = currentSecret;
+            resultInput.setAttribute('title', '256-bit Secret');
+        });
+
+        document.getElementById('generateToken').addEventListener('click', () => {
+            currentToken = generateUnsignedJWT();
+            const resultInput = document.getElementById('result');
+            resultInput.value = currentToken;
+            resultInput.setAttribute('title', 'Unsigned JWT Token');
+        });
+
+        document.getElementById('signToken').addEventListener('click', async () => {
+            if (!currentSecret || !currentToken) {
+                alert('Please generate both a secret and token first');
+                return;
+            }
+
+            try {
+                const signedToken = await signJWT(currentToken, currentSecret);
+                const resultInput = document.getElementById('result');
+                resultInput.value = signedToken;
+                resultInput.setAttribute('title', 'Signed JWT Token');
+            } catch (error) {
+                alert('Error signing token: ' + error.message);
+            }
+        });
+
+        document.getElementById('copy').addEventListener('click', async () => {
+            const resultInput = document.getElementById('result');
+            const copyButton = document.getElementById('copy');
+            
+            try {
+                await navigator.clipboard.writeText(resultInput.value);
+                copyButton.classList.add('copied');
+                setTimeout(() => {
+                    copyButton.classList.remove('copied');
+                }, 1500);
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
+        });
+    </script>
+</body>
+</html>
