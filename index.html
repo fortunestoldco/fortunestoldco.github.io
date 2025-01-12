@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generate</title>
+    <title>Key Generator</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -20,6 +20,7 @@
             display: flex;
             max-width: 400px;
             width: 90%;
+            gap: 8px;
         }
 
         .input-wrapper {
@@ -74,21 +75,34 @@
             color: #c9d1d9;
         }
 
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+
         .generate-button {
             padding: 8px 16px;
-            font-size: 14px;
+            font-size: 16px;
             color: #c9d1d9;
             background-color: #21262d;
             border: 1px solid #30363d;
             border-radius: 6px;
             cursor: pointer;
-            margin-left: 8px;
             transition: 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 42px;
         }
 
         .generate-button:hover {
             background-color: #30363d;
             border-color: #58a6ff;
+            transform: translateY(-1px);
+        }
+
+        .generate-button:active {
+            transform: translateY(0px);
         }
 
         /* Copy icon */
@@ -124,7 +138,7 @@
 <body>
     <div class="container">
         <div class="input-wrapper">
-            <input type="text" id="result" readonly placeholder="Click Generate for random string">
+            <input type="text" id="result" readonly placeholder="Click 🔑 for JWT key or 🪙 for random string">
             <button class="copy-button" id="copy">
                 <svg class="copy-icon" viewBox="0 0 16 16">
                     <path fill-rule="evenodd" d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z"></path>
@@ -135,7 +149,10 @@
                 </svg>
             </button>
         </div>
-        <button class="generate-button" id="generate">Generate</button>
+        <div class="button-group">
+            <button class="generate-button" id="generateJWT" title="Generate JWT Key">🔑</button>
+            <button class="generate-button" id="generateRandom" title="Generate Random String">🪙</button>
+        </div>
     </div>
 
     <script>
@@ -147,9 +164,26 @@
                 .slice(0, 32);
         }
 
-        document.getElementById('generate').addEventListener('click', () => {
+        function generateJWTKey() {
+            const array = new Uint8Array(64); // Using 64 bytes for JWT key
+            crypto.getRandomValues(array);
+            return btoa(String.fromCharCode.apply(null, array))
+                .replace(/[/+=]/g, '')
+                .slice(0, 64); // Longer key for JWT
+        }
+
+        document.getElementById('generateJWT').addEventListener('click', () => {
+            const result = generateJWTKey();
+            const resultInput = document.getElementById('result');
+            resultInput.value = result;
+            resultInput.setAttribute('title', 'JWT Key');
+        });
+
+        document.getElementById('generateRandom').addEventListener('click', () => {
             const result = generateRandomString();
-            document.getElementById('result').value = result;
+            const resultInput = document.getElementById('result');
+            resultInput.value = result;
+            resultInput.setAttribute('title', 'Random String');
         });
 
         document.getElementById('copy').addEventListener('click', async () => {
