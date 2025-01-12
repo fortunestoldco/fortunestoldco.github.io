@@ -18,7 +18,7 @@
         .container {
             position: relative;
             display: flex;
-            max-width: 400px;
+            max-width: 600px;
             width: 90%;
             gap: 8px;
         }
@@ -40,6 +40,8 @@
             border-radius: 6px;
             outline: none;
             transition: border-color 0.2s ease;
+            white-space: nowrap;
+            overflow-x: auto;
         }
 
         input:focus {
@@ -105,14 +107,12 @@
             transform: translateY(0px);
         }
 
-        /* Copy icon */
         .copy-icon {
             width: 14px;
             height: 14px;
             fill: currentColor;
         }
 
-        /* Check icon for copy success */
         .check-icon {
             width: 14px;
             height: 14px;
@@ -138,7 +138,7 @@
 <body>
     <div class="container">
         <div class="input-wrapper">
-            <input type="text" id="result" readonly placeholder="Click 🔑 for JWT key or 🪙 for random string">
+            <input type="text" id="result" readonly placeholder="Click 🔑 for JWT or 🪙 for random string">
             <button class="copy-button" id="copy">
                 <svg class="copy-icon" viewBox="0 0 16 16">
                     <path fill-rule="evenodd" d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z"></path>
@@ -150,7 +150,7 @@
             </button>
         </div>
         <div class="button-group">
-            <button class="generate-button" id="generateJWT" title="Generate JWT Key">🔑</button>
+            <button class="generate-button" id="generateJWT" title="Generate JWT">🔑</button>
             <button class="generate-button" id="generateRandom" title="Generate Random String">🪙</button>
         </div>
     </div>
@@ -164,19 +164,49 @@
                 .slice(0, 32);
         }
 
-        function generateJWTKey() {
-            const array = new Uint8Array(64); // Using 64 bytes for JWT key
+        function base64UrlEncode(str) {
+            return btoa(str)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
+        }
+
+        function generateJWT() {
+            // Create header
+            const header = {
+                alg: 'HS256',
+                typ: 'JWT'
+            };
+
+            // Create payload with current time and future expiry
+            const now = Math.floor(Date.now() / 1000);
+            const oneYearFromNow = now + (365 * 24 * 60 * 60);
+            
+            const payload = {
+                role: 'anon',
+                iss: 'custom-jwt-generator',
+                iat: now,
+                exp: oneYearFromNow
+            };
+
+            // Encode header and payload
+            const encodedHeader = base64UrlEncode(JSON.stringify(header));
+            const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+
+            // Generate a random signature (32 bytes)
+            const array = new Uint8Array(32);
             crypto.getRandomValues(array);
-            return btoa(String.fromCharCode.apply(null, array))
-                .replace(/[/+=]/g, '')
-                .slice(0, 64); // Longer key for JWT
+            const signature = base64UrlEncode(String.fromCharCode.apply(null, array));
+
+            // Combine all parts
+            return `${encodedHeader}.${encodedPayload}.${signature}`;
         }
 
         document.getElementById('generateJWT').addEventListener('click', () => {
-            const result = generateJWTKey();
+            const result = generateJWT();
             const resultInput = document.getElementById('result');
             resultInput.value = result;
-            resultInput.setAttribute('title', 'JWT Key');
+            resultInput.setAttribute('title', 'JWT Token');
         });
 
         document.getElementById('generateRandom').addEventListener('click', () => {
