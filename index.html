@@ -3,7 +3,9 @@
 <!-- Previous head and style sections remain the same -->
 
 <script>
-    // Convert string to Uint8Array for crypto operations
+    let currentSecret = null;
+    let currentToken = null;
+
     function str2ab(str) {
         const buf = new Uint8Array(str.length);
         for (let i = 0; i < str.length; i++) {
@@ -12,7 +14,6 @@
         return buf;
     }
 
-    // Base64Url encode
     function base64UrlEncode(str) {
         return btoa(str)
             .replace(/\+/g, '-')
@@ -20,7 +21,6 @@
             .replace(/=/g, '');
     }
 
-    // Convert ArrayBuffer to Base64Url string
     function arrayBufferToBase64Url(arrayBuffer) {
         const bytes = new Uint8Array(arrayBuffer);
         let binary = '';
@@ -30,19 +30,23 @@
         return base64UrlEncode(binary);
     }
 
-    async function generateSignedJWT() {
-        // Create header
+    function generate256BitSecret() {
+        const array = new Uint8Array(32); // 256 bits = 32 bytes
+        crypto.getRandomValues(array);
+        return arrayBufferToBase64Url(array);
+    }
+
+    function generateUnsignedJWT() {
         const header = {
             alg: 'HS256',
             typ: 'JWT'
         };
 
         // Set specific date and time
-        const specificDate = new Date('2025-01-12T21:48:11Z');
+        const specificDate = new Date('2025-01-12T21:51:26Z');
         const iat = Math.floor(specificDate.getTime() / 1000);
         const exp = iat + (2 * 365 * 24 * 60 * 60); // 2 years from iat
 
-        // Create payload
         const payload = {
             role: 'anon',
             iss: 'fortunestoldco',
@@ -53,48 +57,67 @@
         // Encode header and payload
         const encodedHeader = base64UrlEncode(JSON.stringify(header));
         const encodedPayload = base64UrlEncode(JSON.stringify(payload));
-        const signingInput = `${encodedHeader}.${encodedPayload}`;
+        
+        return `${encodedHeader}.${encodedPayload}`;
+    }
 
-        // Generate a consistent key for signing
+    async function signJWT(token, secret) {
+        if (!token || !secret) {
+            throw new Error('Both token and secret are required');
+        }
+
         const keyMaterial = await crypto.subtle.importKey(
             'raw',
-            str2ab('your-256-bit-secret'),
+            str2ab(atob(secret)), // Convert base64 secret back to binary
             { name: 'HMAC', hash: 'SHA-256' },
             false,
             ['sign']
         );
 
-        // Sign the JWT
         const signature = await crypto.subtle.sign(
             'HMAC',
             keyMaterial,
-            str2ab(signingInput)
+            str2ab(token)
         );
 
-        // Combine all parts
-        return `${signingInput}.${arrayBufferToBase64Url(signature)}`;
+        return `${token}.${arrayBufferToBase64Url(signature)}`;
     }
 
-    function generateRandomString() {
-        const array = new Uint8Array(32);
-        crypto.getRandomValues(array);
-        return btoa(String.fromCharCode.apply(null, array))
-            .replace(/[/+=]/g, '')
-            .slice(0, 32);
-    }
+    // Update the HTML to add the star button
+    document.querySelector('.button-group').innerHTML = `
+        <button class="generate-button" id="generateSecret" title="Generate Secret">🔑</button>
+        <button class="generate-button" id="generateToken" title="Generate Token">🪙</button>
+        <button class="generate-button" id="signToken" title="Sign Token">⭐</button>
+    `;
 
-    document.getElementById('generateJWT').addEventListener('click', async () => {
-        const result = await generateSignedJWT();
+    document.getElementById('generateSecret').addEventListener('click', () => {
+        currentSecret = generate256BitSecret();
         const resultInput = document.getElementById('result');
-        resultInput.value = result;
-        resultInput.setAttribute('title', 'JWT Token');
+        resultInput.value = currentSecret;
+        resultInput.setAttribute('title', '256-bit Secret');
     });
 
-    document.getElementById('generateRandom').addEventListener('click', () => {
-        const result = generateRandomString();
+    document.getElementById('generateToken').addEventListener('click', () => {
+        currentToken = generateUnsignedJWT();
         const resultInput = document.getElementById('result');
-        resultInput.value = result;
-        resultInput.setAttribute('title', 'Random String');
+        resultInput.value = currentToken;
+        resultInput.setAttribute('title', 'Unsigned JWT Token');
+    });
+
+    document.getElementById('signToken').addEventListener('click', async () => {
+        if (!currentSecret || !currentToken) {
+            alert('Please generate both a secret and token first');
+            return;
+        }
+
+        try {
+            const signedToken = await signJWT(currentToken, currentSecret);
+            const resultInput = document.getElementById('result');
+            resultInput.value = signedToken;
+            resultInput.setAttribute('title', 'Signed JWT Token');
+        } catch (error) {
+            alert('Error signing token: ' + error.message);
+        }
     });
 
     // Copy button handler remains the same
