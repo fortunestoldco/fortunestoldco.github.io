@@ -49,6 +49,19 @@
             box-shadow: 0 0 0 1px #58a6ff;
         }
 
+        /* Add color classes for different outputs */
+        input.secret-key {
+            color: #d2a8ff !important; /* Purple */
+        }
+
+        input.unsigned-token {
+            color: #ffd700 !important; /* Yellow */
+        }
+
+        input.signed-token {
+            color: #3fb950 !important; /* Green */
+        }
+
         .copy-button {
             position: absolute;
             right: 6px;
@@ -205,8 +218,8 @@
                 typ: 'JWT'
             };
 
-            // Set specific date and time
-            const specificDate = new Date('2025-01-12T22:12:45Z');
+            // Updated timestamp to 2025-01-12 22:34:10 UTC
+            const specificDate = new Date('2025-01-12T22:34:10Z');
             const iat = Math.floor(specificDate.getTime() / 1000);
             const exp = iat + (2 * 365 * 24 * 60 * 60); // 2 years from iat
 
@@ -258,6 +271,7 @@
             const resultInput = document.getElementById('result');
             resultInput.value = currentSecret;
             resultInput.setAttribute('title', '256-bit Secret');
+            resultInput.className = 'secret-key';
         });
 
         document.getElementById('generateToken').addEventListener('click', () => {
@@ -265,6 +279,7 @@
             const resultInput = document.getElementById('result');
             resultInput.value = currentToken;
             resultInput.setAttribute('title', 'Unsigned JWT Token');
+            resultInput.className = 'unsigned-token';
         });
 
         document.getElementById('signToken').addEventListener('click', async () => {
@@ -278,6 +293,7 @@
                 const resultInput = document.getElementById('result');
                 resultInput.value = signedToken;
                 resultInput.setAttribute('title', 'Signed JWT Token');
+                resultInput.className = 'signed-token';
             } catch (error) {
                 alert('Error signing token: ' + error.message);
             }
